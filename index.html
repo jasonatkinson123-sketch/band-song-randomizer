@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#09061d">
+  <meta name="description" content="An 8-bit no-repeat song randomizer for band rehearsal.">
+  <title>Band Song Randomizer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2309061d'/%3E%3Cpath fill='%23ffe45c' d='M8 7h15v4H12v4h9v10H8v-8h9v-2H8z'/%3E%3C/svg%3E">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');
+
+    :root {
+      --ink: #09061d;
+      --panel: #171039;
+      --panel-hi: #25165a;
+      --cyan: #4df8ff;
+      --pink: #ff4fd8;
+      --gold: #ffe45c;
+      --paper: #f8f7ff;
+      --muted: #aaa4c8;
+      --danger: #ff6577;
+      --pixel-shadow: 4px 4px 0 #000;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; background: var(--ink); }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--paper);
+      font-family: "Space Mono", monospace;
+      background:
+        linear-gradient(rgba(77,248,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77,248,255,.035) 1px, transparent 1px),
+        radial-gradient(circle at 50% 15%, #25105b 0, #09061d 52%);
+      background-size: 24px 24px, 24px 24px, auto;
+      overflow-x: hidden;
+    }
+
+    button, input { font: inherit; }
+    button { touch-action: manipulation; }
+
+    .app {
+      width: min(1040px, calc(100% - 28px));
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 28px 0 34px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 22px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand { min-width: 0; }
+
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--cyan);
+      font: 700 .8rem/1 "Space Mono", monospace;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 740px;
+      color: var(--paper);
+      font: 400 clamp(1.15rem, 3.2vw, 2rem)/1.45 "Press Start 2P", system-ui;
+      text-shadow: 3px 3px 0 #4f217c;
+    }
+
+    .utility {
+      flex: 0 0 auto;
+      border: 2px solid var(--cyan);
+      background: transparent;
+      color: var(--cyan);
+      padding: 12px 14px;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 #08333b;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .utility:hover, .utility:focus-visible { background: #0b343d; outline: none; }
+    .utility:active { transform: translate(3px, 3px); box-shadow: none; }
+
+    .cabinet {
+      position: relative;
+      align-self: center;
+      padding: clamp(12px, 2vw, 22px);
+      border: 5px solid #07040e;
+      background: linear-gradient(135deg, #fe3cc4, #6125c9 48%, #13c9db);
+      box-shadow: 10px 12px 0 rgba(0,0,0,.55), inset 0 0 0 3px rgba(255,255,255,.18);
+    }
+
+    .cabinet::before, .cabinet::after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      top: 9px;
+      background: var(--gold);
+      box-shadow: 0 0 0 3px #3b1c54;
+    }
+    .cabinet::before { left: 11px; }
+    .cabinet::after { right: 11px; }
+
+    .screen {
+      position: relative;
+      min-height: clamp(390px, 60vh, 580px);
+      overflow: hidden;
+      display: grid;
+      align-items: center;
+      justify-items: center;
+      padding: clamp(24px, 6vw, 70px);
+      border: 6px solid #110a25;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px),
+        radial-gradient(circle at 50% 45%, #25125b 0, #0b0821 72%);
+      text-align: center;
+      isolation: isolate;
+    }
+
+    .screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 56px #000;
+      z-index: 5;
+    }
+
+    .burst {
+      position: absolute;
+      width: min(70vw, 520px);
+      aspect-ratio: 1;
+      opacity: 0;
+      transform: scale(.15) rotate(0deg);
+      background: repeating-conic-gradient(from 0deg, var(--pink) 0 8deg, transparent 8deg 16deg, var(--cyan) 16deg 22deg, transparent 22deg 32deg);
+      -webkit-mask: radial-gradient(circle, transparent 0 18%, #000 19% 49%, transparent 50%);
+      mask: radial-gradient(circle, transparent 0 18%, #000 19% 49%, transparent 50%);
+      image-rendering: pixelated;
+      z-index: -1;
+    }
+
+    .screen.revealing .burst { animation: burst 850ms steps(8) both; }
+
+    @keyframes burst {
+      0% { opacity: 0; transform: scale(.1) rotate(0); }
+      35% { opacity: .8; }
+      100% { opacity: .18; transform: scale(1.35) rotate(48deg); }
+    }
+
+    .stars { position: absolute; inset: 0; pointer-events: none; }
+    .star {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--gold);
+      opacity: .2;
+      box-shadow: 8px 0 var(--gold), -8px 0 var(--gold), 0 8px var(--gold), 0 -8px var(--gold);
+    }
+    .star:nth-child(1) { left: 12%; top: 20%; }
+    .star:nth-child(2) { right: 13%; top: 25%; background: var(--cyan); box-shadow: 8px 0 var(--cyan), -8px 0 var(--cyan), 0 8px var(--cyan), 0 -8px var(--cyan); }
+    .star:nth-child(3) { left: 19%; bottom: 19%; background: var(--pink); box-shadow: 8px 0 var(--pink), -8px 0 var(--pink), 0 8px var(--pink), 0 -8px var(--pink); }
+    .star:nth-child(4) { right: 18%; bottom: 16%; }
+    .screen.revealing .star { animation: blink 700ms steps(2) 2; }
+    @keyframes blink { 50% { opacity: 1; transform: scale(1.6); } }
+
+    .content { position: relative; z-index: 2; width: 100%; }
+
+    .prompt {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .song-title {
+      min-height: 2.8em;
+      margin: 0 auto 34px;
+      display: grid;
+      place-items: center;
+      max-width: 800px;
+      color: var(--gold);
+      font: 400 clamp(1.35rem, 4.8vw, 3.2rem)/1.38 "Press Start 2P", system-ui;
+      overflow-wrap: anywhere;
+      text-shadow: 4px 4px 0 #921363, 8px 8px 0 rgba(0,0,0,.45);
+    }
+
+    .screen.revealing .song-title { animation: title-in 650ms steps(6) both; }
+    @keyframes title-in {
+      0% { opacity: 0; transform: translateY(-26px) scale(1.22); filter: blur(2px); }
+      45% { opacity: 1; transform: translateY(8px) scale(.96); }
+      100% { opacity: 1; transform: none; filter: none; }
+    }
+
+    .pick {
+      position: relative;
+      min-width: min(360px, 100%);
+      border: 0;
+      padding: 20px 24px;
+      background: var(--gold);
+      color: #23112f;
+      cursor: pointer;
+      font: 400 clamp(.85rem, 2.5vw, 1.15rem)/1.3 "Press Start 2P", system-ui;
+      box-shadow: 0 7px 0 #a56c17, 0 12px 0 #000;
+      text-transform: uppercase;
+    }
+    .pick:hover, .pick:focus-visible { background: #fff39a; outline: 3px solid var(--cyan); outline-offset: 5px; }
+    .pick:active { transform: translateY(7px); box-shadow: 0 5px 0 #000; }
+    .pick:disabled { cursor: not-allowed; opacity: .5; filter: grayscale(.5); }
+
+    .equalizer {
+      height: 30px;
+      margin: 29px auto 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .equalizer i { width: 7px; height: 6px; background: var(--cyan); opacity: .45; }
+    .screen.revealing .equalizer i { animation: eq 430ms steps(4) infinite alternate; }
+    .equalizer i:nth-child(2n) { animation-delay: -180ms !important; background: var(--pink); }
+    .equalizer i:nth-child(3n) { animation-delay: -320ms !important; background: var(--gold); }
+    @keyframes eq { to { height: 30px; opacity: 1; } }
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .counter strong { color: var(--cyan); }
+    .reset {
+      border: 0;
+      border-bottom: 2px solid var(--pink);
+      padding: 6px 0;
+      background: transparent;
+      color: var(--pink);
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .reset:hover, .reset:focus-visible { color: #ff9aea; outline: none; border-color: #ff9aea; }
+
+    dialog {
+      width: min(700px, calc(100% - 24px));
+      max-height: min(760px, calc(100vh - 24px));
+      padding: 0;
+      border: 4px solid var(--cyan);
+      background: var(--panel);
+      color: var(--paper);
+      box-shadow: 10px 10px 0 #000;
+    }
+    dialog::backdrop { background: rgba(3,1,12,.8); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px; border-bottom: 2px solid #433272; }
+    .dialog-head h2 { margin: 0; font: 400 1rem/1.4 "Press Start 2P", system-ui; color: var(--gold); }
+    .close { border: 0; background: transparent; color: var(--paper); cursor: pointer; font-size: 1.7rem; line-height: 1; }
+    .manager { padding: 20px; overflow-y: auto; max-height: calc(100vh - 110px); }
+    .add-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 20px; }
+    .add-row input { min-width: 0; border: 2px solid #65529c; background: #0b0821; color: var(--paper); padding: 13px; font-size: 1rem; }
+    .add-row input:focus { outline: 2px solid var(--cyan); border-color: transparent; }
+    .add-row button { border: 0; background: var(--cyan); color: var(--ink); padding: 12px 18px; cursor: pointer; font-weight: 700; text-transform: uppercase; }
+    .song-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .song-list li { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 11px 12px; background: var(--panel-hi); border-left: 4px solid var(--pink); }
+    .song-list span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .song-list button { border: 0; background: transparent; color: var(--danger); cursor: pointer; font-weight: 700; }
+    .empty-list { color: var(--muted); text-align: center; padding: 24px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 20;
+      transform: translate(-50%, 20px);
+      padding: 11px 15px;
+      border: 2px solid var(--cyan);
+      background: #09061d;
+      color: var(--paper);
+      opacity: 0;
+      pointer-events: none;
+      transition: .18s ease;
+      box-shadow: var(--pixel-shadow);
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 650px) {
+      .app { width: min(100% - 18px, 1040px); padding-top: 18px; gap: 14px; }
+      header { align-items: flex-start; }
+      .eyebrow { font-size: .7rem; }
+      h1 { font-size: .9rem; }
+      .utility { padding: 10px; font-size: .8rem; }
+      .cabinet { padding: 9px; border-width: 4px; box-shadow: 6px 7px 0 rgba(0,0,0,.6); }
+      .screen { min-height: 470px; padding: 28px 16px; border-width: 4px; }
+      .song-title { font-size: clamp(1.2rem, 7.5vw, 2rem); }
+      .statusbar { font-size: .78rem; }
+      .add-row { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">
+        <p class="eyebrow">Derby Band // Rehearsal Mode</p>
+        <h1>Song Randomizer</h1>
+      </div>
+      <button class="utility" id="manageButton" type="button">Edit songs</button>
+    </header>
+
+    <section class="cabinet" aria-label="Song picker">
+      <div class="screen" id="screen">
+        <div class="burst" aria-hidden="true"></div>
+        <div class="stars" aria-hidden="true">
+          <i class="star"></i><i class="star"></i><i class="star"></i><i class="star"></i>
+        </div>
+        <div class="content">
+          <p class="prompt" id="prompt">Ready player one?</p>
+          <div class="song-title" id="songTitle" aria-live="polite">Press the button</div>
+          <button class="pick" id="pickButton" type="button">Pick a song</button>
+          <div class="equalizer" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="statusbar">
+      <div class="counter"><strong id="remainingCount">0</strong> songs left this round</div>
+      <button class="reset" id="resetButton" type="button">Reset cycle</button>
+    </div>
+  </main>
+
+  <dialog id="songDialog" aria-labelledby="dialogTitle">
+    <div class="dialog-head">
+      <h2 id="dialogTitle">Your song library</h2>
+      <button class="close" id="closeDialog" type="button" aria-label="Close song editor">×</button>
+    </div>
+    <div class="manager">
+      <form class="add-row" id="addForm">
+        <label for="songInput" style="position:absolute;left:-9999px">Song title</label>
+        <input id="songInput" autocomplete="off" maxlength="120" placeholder="Type a song title…">
+        <button type="submit">Add song</button>
+      </form>
+      <ul class="song-list" id="songList"></ul>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'band-randomizer-songs-v1';
+      const DEFAULT_SONGS = [
+        'Jester Dance', 'Alpha Squadron', 'Midnight Madness', 'The Tenth Planet',
+        'Shine', 'Might of Hercules', 'Mechanical Monsters',
+        'Wrath of the Mechanical Monsters', 'Star Wars', 'Dragonslayer',
+        'Rise of the Bladesmith', "Falcon’s Flight March"
+      ];
+
+      const els = {
+        screen: document.querySelector('#screen'),
+        title: document.querySelector('#songTitle'),
+        prompt: document.querySelector('#prompt'),
+        pick: document.querySelector('#pickButton'),
+        count: document.querySelector('#remainingCount'),
+        reset: document.querySelector('#resetButton'),
+        manage: document.querySelector('#manageButton'),
+        dialog: document.querySelector('#songDialog'),
+        close: document.querySelector('#closeDialog'),
+        form: document.querySelector('#addForm'),
+        input: document.querySelector('#songInput'),
+        list: document.querySelector('#songList'),
+        toast: document.querySelector('#toast')
+      };
+
+      let songs = loadSongs();
+      let available = [...songs];
+      let currentSong = null;
+      let toastTimer;
+
+      function loadSongs() {
+        try {
+          const value = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          return Array.isArray(value) ? value.filter(v => typeof v === 'string' && v.trim()).map(v => v.trim()) : [...DEFAULT_SONGS];
+        } catch { return [...DEFAULT_SONGS]; }
+      }
+
+      function saveSongs() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+      }
+
+      function normalize(title) { return title.trim().replace(/\s+/g, ' '); }
+
+      function syncAvailableAfterEdit() {
+        available = available.filter(song => songs.includes(song));
+        const played = new Set(songs.filter(song => !available.includes(song)));
+        for (const song of songs) if (!played.has(song) && !available.includes(song)) available.push(song);
+      }
+
+      function render() {
+        els.count.textContent = available.length;
+        els.pick.disabled = songs.length === 0 || available.length === 0;
+        els.pick.textContent = songs.length === 0 ? 'Add songs first' : available.length === 0 ? 'Round complete' : currentSong ? 'Pick another' : 'Pick a song';
+        els.reset.disabled = songs.length === 0;
+
+        els.list.replaceChildren();
+        if (!songs.length) {
+          const li = document.createElement('li');
+          li.className = 'empty-list';
+          li.textContent = 'No songs yet. Add your first one above.';
+          els.list.append(li);
+        } else {
+          songs.forEach((song, index) => {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = song;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = 'Remove';
+            remove.setAttribute('aria-label', `Remove ${song}`);
+            remove.addEventListener('click', () => removeSong(index));
+            li.append(span, remove);
+            els.list.append(li);
+          });
+        }
+      }
+
+      function animateReveal() {
+        els.screen.classList.remove('revealing');
+        void els.screen.offsetWidth;
+        els.screen.classList.add('revealing');
+      }
+
+      function pickSong() {
+        if (!available.length) return null;
+        const index = Math.floor(Math.random() * available.length);
+        currentSong = available.splice(index, 1)[0];
+        els.prompt.textContent = 'Now playing…';
+        els.title.textContent = currentSong;
+        animateReveal();
+        render();
+        if (!available.length) {
+          els.prompt.textContent = 'Final song of the round!';
+          setTimeout(() => showToast('Set complete — reset when ready'), 700);
+        }
+        return currentSong;
+      }
+
+      function resetCycle() {
+        available = [...songs];
+        currentSong = null;
+        els.screen.classList.remove('revealing');
+        els.prompt.textContent = songs.length ? 'Ready player one?' : 'Your library is empty';
+        els.title.textContent = songs.length ? 'Press the button' : 'Add some songs';
+        render();
+        showToast('Cycle reset');
+        return { songCount: songs.length, remaining: available.length };
+      }
+
+      function addSong(rawTitle) {
+        const title = normalize(rawTitle || '');
+        if (!title) throw new Error('Enter a song title.');
+        if (songs.some(song => song.toLocaleLowerCase() === title.toLocaleLowerCase())) throw new Error('That song is already in the list.');
+        songs.push(title);
+        available.push(title);
+        saveSongs();
+        render();
+        return title;
+      }
+
+      function removeSong(indexOrTitle) {
+        let index = typeof indexOrTitle === 'number'
+          ? indexOrTitle
+          : songs.findIndex(song => song.toLocaleLowerCase() === String(indexOrTitle).toLocaleLowerCase());
+        if (index < 0 || index >= songs.length) throw new Error('Song not found.');
+        const [removed] = songs.splice(index, 1);
+        available = available.filter(song => song !== removed);
+        if (currentSong === removed) currentSong = null;
+        saveSongs();
+        render();
+        showToast(`Removed “${removed}”`);
+        return removed;
+      }
+
+      function showToast(message) {
+        clearTimeout(toastTimer);
+        els.toast.textContent = message;
+        els.toast.classList.add('show');
+        toastTimer = setTimeout(() => els.toast.classList.remove('show'), 1800);
+      }
+
+      els.pick.addEventListener('click', pickSong);
+      els.reset.addEventListener('click', resetCycle);
+      els.manage.addEventListener('click', () => { els.dialog.showModal(); setTimeout(() => els.input.focus(), 50); });
+      els.close.addEventListener('click', () => els.dialog.close());
+      els.dialog.addEventListener('click', event => { if (event.target === els.dialog) els.dialog.close(); });
+      els.form.addEventListener('submit', event => {
+        event.preventDefault();
+        try {
+          const added = addSong(els.input.value);
+          els.input.value = '';
+          showToast(`Added “${added}”`);
+          els.input.focus();
+        } catch (error) { showToast(error.message); }
+      });
+
+      function registerWebMCP() {
+        const context = document.modelContext;
+        if (!context?.registerTool) return;
+        const registrations = [
+          {
+            name: 'get_randomizer_state', title: 'Get randomizer state',
+            description: 'Read the current song library, available songs, and current selection.',
+            inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+            annotations: { readOnlyHint: true, untrustedContentHint: true },
+            execute: () => ({ songs: [...songs], available: [...available], currentSong })
+          },
+          {
+            name: 'add_song', title: 'Add song', description: 'Add one song to the saved local song library.',
+            inputSchema: { type: 'object', properties: { title: { type: 'string', minLength: 1, maxLength: 120 } }, required: ['title'], additionalProperties: false },
+            annotations: { readOnlyHint: false, untrustedContentHint: true },
+            execute: input => ({ added: addSong(input?.title), songCount: songs.length })
+          },
+          {
+            name: 'remove_song', title: 'Remove song', description: 'Remove one song by its exact title from the saved local song library.',
+            inputSchema: { type: 'object', properties: { title: { type: 'string', minLength: 1 } }, required: ['title'], additionalProperties: false },
+            annotations: { readOnlyHint: false, untrustedContentHint: true },
+            execute: input => ({ removed: removeSong(input?.title), songCount: songs.length })
+          },
+          {
+            name: 'pick_random_song', title: 'Pick random song', description: 'Pick and visibly reveal a random unplayed song from the current cycle.',
+            inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+            annotations: { readOnlyHint: false, untrustedContentHint: true },
+            execute: () => {
+              const selected = pickSong();
+              if (!selected) throw new Error('No songs remain in this cycle.');
+              return { selected, remaining: available.length };
+            }
+          },
+          {
+            name: 'reset_song_cycle', title: 'Reset song cycle', description: 'Return every saved song to the available pool.',
+            inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+            annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: resetCycle
+          }
+        ];
+        for (const tool of registrations) Promise.resolve(context.registerTool(tool)).catch(() => {});
+      }
+
+      render();
+      if (!songs.length) resetCycle();
+      registerWebMCP();
+    })();
+  </script>
+</body>
+</html>
