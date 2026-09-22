@@ -11,6 +11,8 @@ A gloriously 8-bit, no-repeat song picker for band rehearsal.
 - Saves edits to the song library in the browser's local storage
 - Adds and removes songs through the built-in song editor
 - Displays each selection with an animated 8-bit reveal
+- Automatically combines a different daily arcade personality with seasonal animation
+- Includes manual day and season overrides in the built-in Skins panel
 - Works on desktop, Chromebook, tablet, and phone
 
 ## Run locally
